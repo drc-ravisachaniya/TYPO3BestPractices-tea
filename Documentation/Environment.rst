@@ -10,25 +10,20 @@ You can run the code quality checks and automated tests locally (using a
 local PHP, Composer, and database) or using runTests.sh.
 
 To kickstart the project, we suggest the usage of the
-`TYPO3-testing-distribution <https://github.com/oliverklee/TYPO3-testing-distribution/>`__
+`TYPO3-testing-distribution <https://github.com/oliverklee-de/TYPO3-testing-distribution>`__
 by Oliver Klee as development environment. The distribution comes with a frontend,
 example data and predefined plugins.
 
 The following commands expect that your SSH key is known by GitHub. If not, you need to use `https://`.
 
-.. index:: Clone TYPO3 Testing Distribution
 .. code-block:: bash
 
    git clone git@github.com:oliverklee/TYPO3-testing-distribution.git
 
 Please checkout the branch for the TYPO3 version you need. e.g. `12.x`.
 For more information about the TYPO3-testing-distribution (e.g. backend user credentials), use the documentation:
-https://github.com/oliverklee-de/TYPO3-testing-distribution/blob/13.x/README.md (TYPO3 13)
-Adjust link to your needed version.
+https://github.com/oliverklee-de/TYPO3-testing-distribution
 
-
-
-.. index:: Clone Tea Extension
 .. code-block:: bash
 
    git clone git@github.com:TYPO3BestPractices/tea.git
@@ -36,7 +31,6 @@ Adjust link to your needed version.
 You can organize the folder structure as you wish, but lets say your folder
 structure looks like this:
 
-.. index:: Folder structure
 .. code-block:: bash
 
     git\
@@ -47,7 +41,6 @@ structure looks like this:
 Inside the testing distribution there is a file
 :file:`docker-compose.extensions.yaml.template` which mounts the used extensions. This file need to be renamed and adjusted.
 
-.. index:: Create docker-compose.extensions.yaml
 .. code-block:: bash
 
     cp .ddev/docker-compose.extensions.yaml.template .ddev/docker-compose.extensions.yaml
@@ -57,7 +50,6 @@ that you use the correct paths here. You need to edit :file:`docker-compose.exte
 and add the following content:
 
 
-.. index:: Mount extension into testing distribution
 .. code-block:: yaml
 
     services:
@@ -73,7 +65,6 @@ and add the following content:
 
 After that you can start the testing distribution using ddev (inside the TYPO3-testion-distribution folder).
 
-.. index:: Start the testing distribution
 .. code-block:: bash
 
     ddev start

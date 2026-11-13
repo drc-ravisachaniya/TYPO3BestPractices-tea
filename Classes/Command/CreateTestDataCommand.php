@@ -22,7 +22,7 @@ final class CreateTestDataCommand extends Command
     /**
      * @var list<array{title: non-empty-string, description: non-empty-string, sys_language_uid: int<0, max>}>
      */
-    protected array $teaData = [
+    private array $teaData = [
         [
             'title' => 'Darjeeling',
             'description' => 'I love that tea!',
@@ -72,10 +72,12 @@ final class CreateTestDataCommand extends Command
             $item = ['pid' => $pageUid, 'title' => $item['title'], 'description' => $item['description']];
             $query->insert($table, $item);
         }
+
         $output->writeln(sprintf('Test data in page %s created.', $pageUid));
 
         $referenceIndex = GeneralUtility::makeInstance(ReferenceIndex::class);
         $referenceIndex->updateIndex(false);
+
         $output->writeln('Reference index updated.');
 
         return Command::SUCCESS;

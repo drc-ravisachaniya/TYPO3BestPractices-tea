@@ -1,6 +1,10 @@
 <?php
 
-return [
+declare(strict_types=1);
+
+use TYPO3\CMS\Core\Information\Typo3Version;
+
+$tca = [
     'ctrl' => [
         'title' => 'LLL:EXT:tea/Resources/Private/Language/locallang_db.xlf:tx_tea_domain_model_tea',
         'label' => 'title',
@@ -9,23 +13,22 @@ return [
         'delete' => 'deleted',
         'default_sortby' => 'title',
         'iconfile' => 'EXT:tea/Resources/Public/Icons/Record.svg',
-        'searchFields' => 'title, description',
         'enablecolumns' => [
             'fe_group' => 'fe_group',
             'disabled' => 'hidden',
             'starttime' => 'starttime',
             'endtime' => 'endtime',
         ],
-        'transOrigPointerField' => 'l18n_parent',
-        'transOrigDiffSourceField' => 'l18n_diffsource',
+        'transOrigPointerField' => 'l10n_parent',
+        'transOrigDiffSourceField' => 'l10n_diffsource',
         'languageField' => 'sys_language_uid',
         'translationSource' => 'l10n_source',
         'versioningWS' => true,
     ],
     'types' => [
         '1' => [
-            'showitem' =>
-                '--div--;LLL:EXT:core/Resources/Private/Language/Form/locallang_tabs.xlf:general,
+            'showitem'
+                => '--div--;LLL:EXT:core/Resources/Private/Language/Form/locallang_tabs.xlf:general,
                     title, description, image, owner,
                  --div--;LLL:EXT:tea/Resources/Private/Language/locallang_db.xlf:tx_tea_domain_model_tea.tabs.access,
                     --palette--;;hidden,
@@ -88,43 +91,6 @@ return [
             ],
             'l10n_mode' => 'exclude',
             'l10n_display' => 'defaultAsReadonly',
-        ],
-        'sys_language_uid' => [
-            'exclude' => true,
-            'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.language',
-            'config' => [
-                'type' => 'language',
-            ],
-        ],
-        'l18n_parent' => [
-            'displayCond' => 'FIELD:sys_language_uid:>:0',
-            'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.l18n_parent',
-            'config' => [
-                'type' => 'select',
-                'renderType' => 'selectSingle',
-                'items' => [
-                    [
-                        'label' => '',
-                        'value' => 0,
-                    ],
-                ],
-                'foreign_table' => 'tx_tea_domain_model_tea',
-                'foreign_table_where' =>
-                    'AND {#tx_tea_domain_model_tea}.{#pid}=###CURRENT_PID###
-                     AND {#tx_tea_domain_model_tea}.{#sys_language_uid} IN (-1,0)',
-                'default' => 0,
-            ],
-        ],
-        'l10n_source' => [
-            'config' => [
-                'type' => 'passthrough',
-            ],
-        ],
-        'l18n_diffsource' => [
-            'config' => [
-                'type' => 'passthrough',
-                'default' => '',
-            ],
         ],
         'title' => [
             'label' => 'LLL:EXT:tea/Resources/Private/Language/locallang_db.xlf:tx_tea_domain_model_tea.title',
@@ -205,3 +171,10 @@ return [
         ],
     ],
 ];
+
+$typo3Version = new Typo3Version();
+if ($typo3Version->getMajorVersion() <= 13) {
+    $tca['ctrl']['searchFields'] = 'title, description';
+}
+
+return $tca;

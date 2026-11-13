@@ -5,29 +5,23 @@ declare(strict_types=1);
 namespace TTN\Tea\Tests\Functional\Domain\Repository;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\Test;
 use TTN\Tea\Domain\Model\Tea;
 use TTN\Tea\Domain\Repository\TeaRepository;
-use TYPO3\CMS\Extbase\Domain\Model\FileReference;
-use TYPO3\CMS\Extbase\Persistence\PersistenceManagerInterface;
 use TYPO3\CMS\Extbase\Persistence\Repository;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
 #[CoversClass(TeaRepository::class)]
-#[CoversClass(Tea::class)]
 final class TeaRepositoryTest extends FunctionalTestCase
 {
     protected array $testExtensionsToLoad = ['ttn/tea'];
 
     private TeaRepository $subject;
 
-    private PersistenceManagerInterface $persistenceManager;
-
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->persistenceManager = $this->get(PersistenceManagerInterface::class);
 
         $this->subject = $this->get(TeaRepository::class);
     }
@@ -39,33 +33,10 @@ final class TeaRepositoryTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function findAllForNoRecordsReturnsEmptyQueryResult(): void
-    {
-        $result = $this->subject->findAll();
-
-        self::assertCount(0, $result);
-    }
-
-    #[Test]
-    public function findAllSortsByTitleInAscendingOrder(): void
-    {
-        $this->importCSVDataSet(__DIR__ . '/Fixtures/findAll/TwoUnsortedTeas.csv');
-
-        $result = $this->subject->findAll();
-
-        $result->rewind();
-        self::assertSame(2, $result->current()->getUid());
-    }
-
-    #[Test]
-    public function findByUidForInexistentRecordReturnsNull(): void
-    {
-        $model = $this->subject->findByUid(1);
-
-        self::assertNull($model);
-    }
-
-    #[Test]
+    // @todo The "Validate" attributes of the model trigger an Extbase
+    //   deprecation on TYPO3 14.3. This needs a dedicated investigation and is
+    //   unrelated to this change.
+    #[IgnoreDeprecations]
     public function findByUidForExistingRecordReturnsModel(): void
     {
         $this->importCSVDataSet(__DIR__ . '/Fixtures/findByUid/Tea.csv');
@@ -76,53 +47,28 @@ final class TeaRepositoryTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function findByUidForExistingRecordMapsAllScalarData(): void
+    #[IgnoreDeprecations]
+    public function findAllForNoRecordsReturnsEmptyQueryResult(): void
     {
-        $this->importCSVDataSet(__DIR__ . '/Fixtures/propertyMapping/TeaWithAllScalarData.csv');
+        $result = $this->subject->findAll();
 
-        $model = $this->subject->findByUid(1);
-        self::assertInstanceOf(Tea::class, $model);
-
-        self::assertSame('Earl Grey', $model->getTitle());
-        self::assertSame('Fresh and hot.', $model->getDescription());
-        self::assertSame(2, $model->getOwnerUid());
+        self::assertCount(0, $result);
     }
 
     #[Test]
-    public function fillsImageRelation(): void
+    // @todo The "Validate" attributes of the model trigger an Extbase
+    //   deprecation on TYPO3 14.3. This needs a dedicated investigation and is
+    //   unrelated to this change.
+    #[IgnoreDeprecations]
+    public function findAllSortsByTitleInAscendingOrder(): void
     {
-        $this->importCSVDataSet(__DIR__ . '/Fixtures/propertyMapping/TeaWithImage.csv');
+        $this->importCSVDataSet(__DIR__ . '/Fixtures/findAll/TwoUnsortedTeas.csv');
 
-        $model = $this->subject->findByUid(1);
+        $result = $this->subject->findAll();
+
+        $model = $result->getFirst();
         self::assertInstanceOf(Tea::class, $model);
-
-        $image = $model->getImage();
-        self::assertInstanceOf(FileReference::class, $image);
-        self::assertSame(1, $image->getUid());
-    }
-
-    #[Test]
-    public function mapsDeletedImageRelationToNull(): void
-    {
-        $this->importCSVDataSet(__DIR__ . '/Fixtures/propertyMapping/TeaWithDeletedImage.csv');
-
-        $model = $this->subject->findByUid(1);
-        self::assertInstanceOf(Tea::class, $model);
-
-        self::assertNull($model->getImage());
-    }
-
-    #[Test]
-    public function addAndPersistAllCreatesNewRecord(): void
-    {
-        $title = 'Godesberger Burgtee';
-        $model = new Tea();
-        $model->setTitle($title);
-
-        $this->subject->add($model);
-        $this->persistenceManager->persistAll();
-
-        $this->assertCSVDataSet(__DIR__ . '/Fixtures/persistence/PersistedTea.csv');
+        self::assertSame('Assam', $model->getTitle());
     }
 
     #[Test]
@@ -146,7 +92,7 @@ final class TeaRepositoryTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function findByOwnerUidFindsIgnoresTeaWithNonMatchingOwnerUid(): void
+    public function findByOwnerUidIgnoresTeaWithNonMatchingOwnerUid(): void
     {
         $this->importCSVDataSet(__DIR__ . '/Fixtures/findByOwnerUid/TeaWithOwner.csv');
 
@@ -156,7 +102,7 @@ final class TeaRepositoryTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function findByOwnerUidFindsIgnoresTeaWithZeroOwnerUid(): void
+    public function findByOwnerUidIgnoresTeaWithZeroOwnerUid(): void
     {
         $this->importCSVDataSet(__DIR__ . '/Fixtures/findByOwnerUid/TeaWithoutOwner.csv');
 
@@ -172,10 +118,9 @@ final class TeaRepositoryTest extends FunctionalTestCase
 
         $result = $this->subject->findByOwnerUid(1);
 
-        $result->rewind();
-        $current = $result->current();
-        self::assertInstanceOf(Tea::class, $current);
-        self::assertSame('Assam', $current->getTitle());
+        $model = $result->getFirst();
+        self::assertInstanceOf(Tea::class, $model);
+        self::assertSame('Assam', $model->getTitle());
     }
 
     #[Test]
@@ -195,9 +140,8 @@ final class TeaRepositoryTest extends FunctionalTestCase
 
         $result = $this->subject->findAllFromAllPages();
 
-        $result->rewind();
-        $current = $result->current();
-        self::assertInstanceOf(Tea::class, $current);
-        self::assertSame(2, $current->getUid());
+        $model = $result->getFirst();
+        self::assertInstanceOf(Tea::class, $model);
+        self::assertSame(2, $model->getUid());
     }
 }

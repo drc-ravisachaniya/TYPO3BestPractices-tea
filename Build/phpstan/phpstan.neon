@@ -1,13 +1,10 @@
 includes:
-  - phpstan-baseline.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-insecure-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-loose-calls.neon
 
 parameters:
-  phpVersion: 80100
-
   level: 9
 
   paths:
@@ -17,20 +14,16 @@ parameters:
     - ../../ext_localconf.php
 
   type_coverage:
-    return_type: 100
-    param_type: 100
-    property_type: 95
+    # Native types for class constants are only available in PHP >= 8.3.0:
+    # https://www.php.net/manual/en/language.oop5.constants.php
+    constant: 0
+    param: 100
+    property: 95
+    return: 100
 
   cognitive_complexity:
     class: 10
     function: 5
-
-  type_perfect:
-    no_mixed_property: true
-    no_mixed_caller: true
-    null_over_false: true
-    narrow_param: false
-    narrow_return: false
 
   disallowedFunctionCalls:
     -
@@ -61,14 +54,28 @@ parameters:
 
   ignoreErrors:
     -
-      message: '#Class cognitive complexity is#'
-      path: '../../Classes/Upgrades/AbstractListTypeToCTypeUpdate.php'
-    -
-      message: '#Cognitive complexity for#'
-      path: '../../Classes/Upgrades/AbstractListTypeToCTypeUpdate.php'
-    -
       message: '#^Call to static method PHPUnit\\Framework\\Assert\:\:assertInstanceOf\(\) .* will always evaluate to#'
       path: '../../Tests/'
 
   featureToggles:
     rawMessageInBaseline: true
+
+  ergebnis:
+    declareStrictTypes:
+      enabled: true
+    final:
+      enabled: false
+    finalInAbstractClass:
+      enabled: true
+    noExtends:
+      enabled: false
+    noIsset:
+      enabled: false
+    noNullableReturnTypeDeclaration:
+      enabled: false
+    noParameterWithContainerTypeDeclaration:
+      enabled: false
+    noParameterWithNullableTypeDeclaration:
+      enabled: false
+    noParameterWithNullDefaultValue:
+      enabled: false

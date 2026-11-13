@@ -1,78 +1,105 @@
 ---
 name: CI
+# Every "runTests.sh" call below passes "-b docker". The script prefers podman
+# whenever it is present and only falls back to docker, which is the right
+# default for local runs, but GitHub hosted runners ship both. On these runners
+# the MariaDB container of the functional tests is never reachable under podman
+# (#2103), while the same run passes with docker. Selecting docker here keeps the
+# script default and local runs untouched.
 on:
   push:
     branches:
       - main
   pull_request:
-  schedule:
-    - cron: '15 3 * * 1'
 permissions:
   contents: read
 jobs:
   php-lint:
     name: PHP linter
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
       - name: Show the Composer configuration
-        run: ./Build/Scripts/runTests.sh -s composer config --global --list
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
       - name: Cache dependencies installed with composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
           path: .cache/composer
           restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
       - name: Install composer dependencies
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
       - name: Lint PHP
         run: |
-          Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s lintPhp
+          Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -s lintPhp
     strategy:
       fail-fast: false
       matrix:
         include:
-          - typo3-version: "12.4"
-            php-version: "8.1"
-            composer-dependencies: Max
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
             php-version: "8.2"
             composer-dependencies: Max
-          - typo3-version: "13.4"
-            php-version: "8.3"
-            composer-dependencies: Max
-          - typo3-version: "13.4"
-            php-version: "8.4"
-            composer-dependencies: Max
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
             php-version: "8.5"
             composer-dependencies: Max
-  code-quality:
-    name: Code quality checks
-    runs-on: ubuntu-24.04
+  phpstan:
+    name: PHPStan code quality checks
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
       - name: Show the Composer configuration
-        run: ./Build/Scripts/runTests.sh -s composer config --global --list
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
       - name: Cache dependencies installed with composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
           path: .cache/composer
           restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
       - name: Install composer dependencies
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+      - name: Run phpstan code quality checks
+        run: |
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s phpstan
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - typo3-version: "13.4"
+            php-version: "8.2"
+            composer-dependencies: Max
+          - typo3-version: "14.3"
+            php-version: "8.2"
+            composer-dependencies: Max
+  code-quality:
+    name: Code quality checks
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Show the Composer version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
+      - name: Show the Composer configuration
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
+      - name: Cache dependencies installed with composer
+        uses: actions/cache@v6
+        with:
+          key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
+          path: .cache/composer
+          restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
+      - name: Install composer dependencies
+        run: |
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
       - name: Run code quality checks
         run: |
-          Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s composer check:${{ matrix.command }}
+          Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -s composer check:${{ matrix.command }}
     strategy:
       fail-fast: false
       matrix:
@@ -80,77 +107,110 @@ jobs:
           - "composer:psr-verify"
           - "composer:unused"
           - "json:lint"
-          - "php:cs-fixer"
           - "php:rector"
-          - "php:stan"
           - "typoscript:lint"
           - "xliff:lint"
+          - "xliff:normalize"
           - "yaml:lint"
         # For consistency, the PHP version should match the default PHP version in `runTests.sh`.
         php-version:
           - "8.2"
         # For consistency, the TYPO3 version should match the default TYPO3 version in `runTests.sh`.
         typo3-version:
-          - "13.4"
+          - "14.3"
+        composer-dependencies:
+          - Max
+  legacy-composer-checks:
+    name: Legacy composer checks
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Show the Composer version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
+      - name: Show the Composer configuration
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
+      - name: Cache dependencies installed with composer
+        uses: actions/cache@v6
+        with:
+          key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
+          path: .cache/composer
+          restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
+      - name: Install composer dependencies
+        run: |
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+      - name: Run PHP-CS-Fixer
+        run: |
+          Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -s composer check:php:cs-fixer
+    strategy:
+      matrix:
+        # For php cs-fixer, the PHP version must be the minimum supported version.
+        php-version:
+          - "8.2"
+        # For consistency, the TYPO3 version should match the default TYPO3 version in `runTests.sh` or the maximum version
+        # compatible with the PHP version above, respectively.
+        typo3-version:
+          - "14.3"
         composer-dependencies:
           - Max
   static-code-analysis:
     name: Static code quality checks
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
       - name: Show the Composer configuration
-        run: ./Build/Scripts/runTests.sh -s composer config --global --list
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
       - name: Cache dependencies installed with composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
           path: .cache/composer
           restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
       - name: Install composer dependencies
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
       - name: Run code quality checks
         run: |
-          Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s ${{ matrix.command }}
+          Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -n -s ${{ matrix.command }}
     strategy:
       fail-fast: false
       matrix:
         command:
+          - "cgl"
+          - "composerNormalize"
           - "phpmd"
-          - "checkComposerNormalize"
         # For consistency, the PHP version should match the default PHP version in `runTests.sh`.
         php-version:
           - "8.2"
         # For consistency, the TYPO3 version should match the default TYPO3 version in `runTests.sh`.
         typo3-version:
-          - "13.4"
+          - "14.3"
         composer-dependencies:
           - Max
   check-fixers:
     name: Check fixers
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
       - name: Show the Composer configuration
-        run: ./Build/Scripts/runTests.sh -s composer config --global --list
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
       - name: Cache dependencies installed with composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
           path: .cache/composer
           restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
       - name: Install composer dependencies
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
       - name: Runs all automatic code style fixes.
-        run: Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s fix
+        run: Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -s fix
     strategy:
       fail-fast: false
       matrix:
@@ -159,17 +219,17 @@ jobs:
           - "8.2"
         # For consistency, the TYPO3 version should match the default TYPO3 version in `runTests.sh`.
         typo3-version:
-          - "13.4"
+          - "14.3"
         composer-dependencies:
           - Max
   prepare-release:
     name: Check prepare release script
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Run prepare release
-        run: Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s composer prepare-release
+        run: Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -s composer prepare-release
     strategy:
       fail-fast: false
       matrix:
@@ -177,7 +237,7 @@ jobs:
           - "8.3"
   code-quality-frontend:
     name: Code quality frontend checks
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -186,49 +246,37 @@ jobs:
           - "Js"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Run code quality frontend
         run: |
-          Build/Scripts/runTests.sh -s lint${{ matrix.command }}
+          Build/Scripts/runTests.sh -b docker -s lint${{ matrix.command }}
   unit-tests:
     name: Unit tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: php-lint
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
       - name: Show the Composer configuration
-        run: ./Build/Scripts/runTests.sh -s composer config --global --list
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
       - name: Cache dependencies installed with composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
           path: .cache/composer
           restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
       - name: Install composer dependencies
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
       - name: Run unit tests
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s unit
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s unit
     strategy:
       fail-fast: false
       matrix:
         include:
-          - typo3-version: "12.4"
-            php-version: "8.1"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.1"
-            composer-dependencies: Max
-          - typo3-version: "12.4"
-            php-version: "8.5"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.5"
-            composer-dependencies: Max
           - typo3-version: "13.4"
             php-version: "8.2"
             composer-dependencies: Min
@@ -241,98 +289,180 @@ jobs:
           - typo3-version: "13.4"
             php-version: "8.5"
             composer-dependencies: Max
+          - typo3-version: "14.3"
+            php-version: "8.2"
+            composer-dependencies: Min
+          - typo3-version: "14.3"
+            php-version: "8.2"
+            composer-dependencies: Max
+          - typo3-version: "14.3"
+            php-version: "8.5"
+            composer-dependencies: Min
+          - typo3-version: "14.3"
+            php-version: "8.5"
+            composer-dependencies: Max
   functional-tests:
     name: Functional tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: php-lint
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
       - name: Show the Composer configuration
-        run: ./Build/Scripts/runTests.sh -s composer config --global --list
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
       - name: Cache dependencies installed with composer
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
           path: .cache/composer
           restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
       - name: Install composer dependencies
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
       - name: Run functional tests
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -d ${{ matrix.dbms }} -s functional
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -d ${{ matrix.dbms }} -s functional
     strategy:
       fail-fast: false
       matrix:
         include:
-          - typo3-version: "12.4"
-            php-version: "8.1"
+          - typo3-version: "13.4"
+            php-version: "8.2"
             dbms: "sqlite"
             composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.1"
+          - typo3-version: "13.4"
+            php-version: "8.2"
             dbms: "sqlite"
             composer-dependencies: Max
-          - typo3-version: "12.4"
+          - typo3-version: "13.4"
             php-version: "8.5"
             dbms: "sqlite"
             composer-dependencies: Min
-          - typo3-version: "12.4"
+          - typo3-version: "13.4"
+            php-version: "8.5"
+            dbms: "sqlite"
+            composer-dependencies: Max
+          - typo3-version: "13.4"
+            php-version: "8.5"
+            dbms: "mariadb"
+            composer-dependencies: Max
+          - typo3-version: "13.4"
             php-version: "8.5"
             dbms: "mysql"
             composer-dependencies: Max
-          - typo3-version: "12.4"
+          - typo3-version: "13.4"
             php-version: "8.5"
             dbms: "postgres"
             composer-dependencies: Max
-          - typo3-version: "12.4"
-            php-version: "8.5"
-            dbms: "sqlite"
-            composer-dependencies: Max
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
             php-version: "8.2"
             dbms: "sqlite"
             composer-dependencies: Min
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
             php-version: "8.2"
             dbms: "sqlite"
             composer-dependencies: Max
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
             php-version: "8.5"
             dbms: "sqlite"
             composer-dependencies: Min
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
             php-version: "8.5"
             dbms: "sqlite"
             composer-dependencies: Max
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
+            php-version: "8.5"
+            dbms: "mariadb"
+            composer-dependencies: Max
+          - typo3-version: "14.3"
             php-version: "8.5"
             dbms: "mysql"
             composer-dependencies: Max
-          - typo3-version: "13.4"
+          - typo3-version: "14.3"
             php-version: "8.5"
             dbms: "postgres"
             composer-dependencies: Max
   shellcheck:
     name: Check shell scripts
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Check scripts
         run: |
-          Build/Scripts/runTests.sh -s shellcheck
+          Build/Scripts/runTests.sh -b docker -s shellcheck
   documentation:
     name: Documentation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Test if the documentation will render without warnings
         run: |
-          Build/Scripts/runTests.sh -s executeRstRendering
+          Build/Scripts/runTests.sh -b docker -s executeRstRendering
+  code-coverage:
+    name: Calculate code coverage
+    # The coverage is collected by running the suites once more with "-m". So this job consumes
+    # nothing the test jobs produce. It waits for them anyway so that a coverage result is never
+    # published before the tests it is derived from have run.
+    #
+    # "!cancelled()" rather than "always()" or "success() || failure()": The coverage data is meant to
+    # be published even when a test suite fails, but "unit-tests" and "functional-tests" are
+    # skipped when "php-lint" fails, and a skipped dependency would skip this job as well.
+    # "always()" would additionally run it after the whole run has been canceled.
+    needs: [unit-tests, functional-tests]
+    if: ${{ !cancelled() }}
+    permissions:
+      actions: write
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Show the Composer version
+        run: ./Build/Scripts/runTests.sh -b docker -s composer -- --version
+      - name: Show the Composer configuration
+        run: ./Build/Scripts/runTests.sh -b docker -s composer config --global --list
+      - name: Cache dependencies installed with composer
+        uses: actions/cache@v6
+        with:
+          key: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-${{ hashFiles('**/composer.json') }}"
+          path: .cache/composer
+          restore-keys: "php-${{ matrix.php-version }}-typo3-${{ matrix.typo3-version }}-${{ matrix.composer-dependencies }}-composer-\n"
+      - name: Install composer dependencies
+        run: |
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{ matrix.typo3-version }} -s composerUpdate${{ matrix.composer-dependencies }}
+      - name: Run unit tests with coverage
+        run: |
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{ matrix.typo3-version }} -s unit -m
+      - name: Run functional tests with coverage
+        run: |
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{ matrix.typo3-version }} -d ${{ matrix.dbms }} -s functional -m
+      - name: Show the collected coverage reports
+        run: "ls -lahR .Build/coverage/"
+      - name: Merge the coverage reports
+        run: |
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -t ${{ matrix.typo3-version }} -s coverageMerge
+      - name: Show the merged coverage report
+        run: "ls -lahR .Build/logs/"
+      - name: Upload coverage results to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: .Build/logs/clover.xml
+          format: clover
+          fail-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The reports of one run are merged into a single result. So they all have to come from
+          # the same installed dependency set. Collect the coverage for one TYPO3 and one PHP
+          # version only rather than across the test matrix above.
+          - typo3-version: "14.3"
+            php-version: "8.5"
+            dbms: "sqlite"
+            composer-dependencies: Max

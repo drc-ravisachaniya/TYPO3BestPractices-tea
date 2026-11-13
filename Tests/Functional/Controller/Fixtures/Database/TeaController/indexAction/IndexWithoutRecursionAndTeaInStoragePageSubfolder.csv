@@ -1,3 +1,8 @@
+"pages"
+,"uid","pid","title","slug"
+,2,1,"Storage","/storage"
+,4,2,"Storage subfolder","/storage-subfolder"
+
 "tt_content"
 ,"uid","pid","CType","header","pi_flexform"
 ,1,1,"tea_teaindex","Tea index","<?xml version=""1.0"" encoding=""utf-8"" standalone=""yes"" ?>
@@ -9,13 +14,13 @@
                                                     <value index=""vDEF"">2</value>
                                                 </field>
                                                 <field index=""persistence.recursive"">
-                                                    <value index=""vDEF"">4</value>
-                                                </field>
-                                                <field index=""settings.singleViewPage"">
-                                                    <value index=""vDEF"">3</value>
+                                                    <value index=""vDEF"">0</value>
                                                 </field>
                                              </language>
                                          </sheet>
                                     </data>
                                  </T3FlexForms>"
-,2,3,"tea_teashow","Tea show",""
+
+"tx_tea_domain_model_tea"
+,"uid","pid","title"
+,1,4,"Tea in subfolder"

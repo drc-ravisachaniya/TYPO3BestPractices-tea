@@ -17,6 +17,67 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Documentation
 
+## 5.0.0: Support TYPO3 14LTS, drop TYPO3 12LTS and PHP 8.1
+
+### Added
+
+- Add `checkStatic` to `runTests.sh` (#2451)
+- Add functional tests for the recursive storage PID (#2366)
+- Add the image to the show action (#2303)
+- Add support for TYPO3 14LTS (#2254, #2266, #2267, #2301, #2302, #2304, #2308,
+  #2309, #2310, #2449, #2450)
+- Add a dedicated weekly CI workflow (#1903)
+
+### Changed
+
+- Use one fixture file per test scenario (#2370)
+- Pin the unit and functional tests to the installed TYPO3 version (#2327)
+- Collect the code coverage with `runTests.sh` (#1802)
+- Calculate the code coverage after the test suites (#1802)
+
+### Removed
+
+- Drop the `ListTypeToCTypeUpdate` upgrade wizard (#2211)
+- Drop support for TYPO3 12LTS (#2210)
+- Drop support for PHP 8.1 (#2207)
+- Drop the code coverage Composer scripts (#1802)
+
+### Fixed
+
+- Keep `composer.json` unchanged when running
+  `runTests.sh -s composerUpdate(Min|Max)` (#2192)
+- Pass the Coveralls GitHub Action its inputs (#1802)
+
+## V4.1.0: CI improvements, bugfixes and cleanup
+
+### Added
+
+- Add tests for the model property validations (#2127)
+- Split PHPStan CI jobs (#2050)
+- Add a more comprehensive XLIFF integrity checker (#2148)
+- Add a German translation for the BE module (#2163)
+- Add Postgres/MySQL to the functional tests on CI (#2101)
+- Add Composer caching on CI (#1933, #2139)
+
+### Changed
+
+- Disable some Type Perfect PHPStan rules (#2134)
+- Do not process `Build/` with Rector (#2126)
+- Move PHPCov from Phive to Composer (#2109)
+
+### Removed
+
+- Drop Composer scripts for functional tests
+- Drop the `AbstractFrontendControllerTestCase` (#2076)
+
+### Fixed
+
+- Fix locallang files (#2158)
+- Fix path to the Composer cache in GitHub Actions (#2139)
+- Actually fix the code with `runTests.sh -s phpCsFixer` (#2136)
+- Return exitcode != 0 when `runTests.sh -s composerUpdate(Min|Max)`
+  fails (#1936)
+
 ## 4.0.0
 
 ### Added
